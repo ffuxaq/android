@@ -1,10 +1,14 @@
 package ffuxaq.gmail.com.app4;
 
 import android.app.Fragment;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -21,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
+
 import javax.xml.transform.Result;
 
 /**
@@ -28,8 +34,33 @@ import javax.xml.transform.Result;
  */
 public class ForecastFragment extends Fragment {
 
+
     public ForecastFragment() {
 
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        this.setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
+        inflater.inflate(R.menu.forecastfragment,menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem mi) {
+        int id= mi.getItemId();
+        if (id == R.id.action_refresh) {
+            new FetchWeatherTask().execute();
+            return true;
+
+        }
+
+        return super.onOptionsItemSelected(mi);
     }
 
     @Override
@@ -64,17 +95,43 @@ public class ForecastFragment extends Fragment {
 
         View rootView = inflater.inflate(R.layout.fragment_main,container);
 
+
+
         ListView lw = (ListView)rootView.findViewById(R.id.listview_forecast);
         lw.setAdapter(aa);
 
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<URL,Integer,String>{
 
+
+    public class FetchWeatherTask extends AsyncTask<String,Integer,String>{
+        private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
+
+
+        private synchronized String getUrl(String... params) {
+            Uri.Builder builder = new android.net.Uri.Builder();
+            builder.scheme("http://").authority("api.openweathermap.org")
+                    .appendPath("data")
+                    .appendPath("2.5")
+                    .appendPath("forecast")
+                    .appendPath("daily")
+                    .appendQueryParameter("q",params[0])
+                    .appendQueryParameter("mode","json")
+                    .appendQueryParameter("units","metric")
+                    .appendQueryParameter("cnt","7");
+
+
+                    String returnUrl= builder.build().toString();
+            Log.v(LOG_TAG,"Url from uri.builder = " + returnUrl);
+
+             //http://api.openweathermap.org/data/2.5/forecast/daily?q=94043&mode=json&units=metric&cnt=7
+
+            return returnUrl;
+        }
 
        @Override
-        protected String doInBackground(URL... urls){
+        protected String doInBackground(String... str){
             // These two need to be declared outside the try/catch
 // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -85,7 +142,10 @@ public class ForecastFragment extends Fragment {
 // Construct the URL for the OpenWeatherMap query
 // Possible parameters are available at OWM's forecast API page, at
 // http://openweathermap.org/API#forecast
-                URL url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?q=94043&mode=json&units=metric&cnt=7");
+
+                String connUrl = this.getUrl(str);
+
+                URL url = new URL(connUrl);
 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
@@ -111,6 +171,7 @@ public class ForecastFragment extends Fragment {
                     forecastJsonStr = null;
                 }
                 forecastJsonStr = buffer.toString();
+                Log.v(LOG_TAG,"Forecast JSON String:" + forecastJsonStr);
             }
             catch(MalformedURLException mue){
                 Log.e("PlaceholderFragment", "Error ",mue);
@@ -138,4 +199,6 @@ public class ForecastFragment extends Fragment {
 
 
     }
+
+
 }
